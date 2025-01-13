@@ -12,24 +12,23 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 from deepface import DeepFace
 import random
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
-credentials_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
-
 
 app = Flask(__name__)
 CORS(app)
 
-# Configuración de credenciales y Google Drive
+# Configuración del archivo JSON de credenciales
 CREDENTIALS_FILE = 'secret.json'
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
-FOLDER_ID = '1ZNUgneU919vdI1Lg__o4XWGWQx3xVfhz'
+FOLDER_ID = '1ZNUgneU919vdI1Lg__o4XWGWQx3xVfhz'  # Cambiar por tu carpeta de Google Drive
 
+# Inicializar el servicio de Google Drive
 def obtener_servicio_drive():
-    creds = service_account.Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=SCOPES)
-    return build('drive', 'v3', credentials=creds)
+    try:
+        creds = service_account.Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=SCOPES)
+        service = build('drive', 'v3', credentials=creds)
+        return service
+    except Exception as e:
+        raise Exception(f"Error al cargar las credenciales: {e}")
 
 @app.route('/')
 def index():
@@ -48,8 +47,13 @@ def detectar_puntos_y_procesar_imagenes():
     archivo.seek(0)
     image_np = np.array(Image.open(archivo).convert('RGB'))
 
+    if image_np is None:
+        return jsonify({'error': 'Error al cargar la imagen'})
+
     imagen_con_puntos = Image.fromarray(image_np)
     imagen_brillo = ImageEnhance.Brightness(imagen_con_puntos).enhance(random.uniform(1.5, 2))
+    imagen_girada_horizontal = imagen_con_puntos.transpose(Image.FLIP_LEFT_RIGHT)
+    imagen_girada_vertical = imagen_con_puntos.transpose(Image.FLIP_TOP_BOTTOM)
 
     mp_face_mesh = mp.solutions.face_mesh
     with mp_face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1, refine_landmarks=True, min_detection_confidence=0.5) as face_mesh:
@@ -63,14 +67,29 @@ def detectar_puntos_y_procesar_imagenes():
                         h, w, _ = image_np.shape
                         x = int(landmark.x * w)
                         y = int(landmark.y * h)
+                        size = 8
+                        color = (255, 0, 0)
+                        thickness = 4
                         draw_puntos = ImageDraw.Draw(imagen_con_puntos)
-                        draw_puntos.ellipse((x-4, y-4, x+4, y+4), fill=(255, 0, 0))
+                        draw_puntos.line((x - size, y - size, x + size, y + size), fill=color, width=thickness)
+                        draw_puntos.line((x - size, y + size, x + size, y - size), fill=color, width=thickness)
+
+    TRADUCCION_EMOCIONES = {
+        "angry": "enojado",
+        "disgust": "disgustado",
+        "fear": "miedo",
+        "happy": "feliz",
+        "sad": "triste",
+        "surprise": "sorprendido",
+        "neutral": "neutral"
+    }
 
     try:
         resultado_emocion = DeepFace.analyze(img_path=image_np, actions=['emotion'], enforce_detection=False)
-        emocion_principal = resultado_emocion[0]['dominant_emotion']
-    except Exception:
-        emocion_principal = "No detectado"
+        emocion_principal_en = resultado_emocion[0]['dominant_emotion']
+        emocion_principal = TRADUCCION_EMOCIONES.get(emocion_principal_en, emocion_principal_en)
+    except Exception as e:
+        emocion_principal = f"Error detectando emociones: {str(e)}"
 
     def convertir_a_base64(imagen):
         buffered = io.BytesIO()
