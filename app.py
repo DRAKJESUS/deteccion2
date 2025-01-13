@@ -12,6 +12,12 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 from deepface import DeepFace
 import random
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+credentials_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+
 
 app = Flask(__name__)
 CORS(app)
