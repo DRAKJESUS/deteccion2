@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detección de Emociones</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #6a11cb, #2575fc);
+            color: #fff;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 5% auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 20px;
+            color: #f9f9f9;
+        }
+
+        form {
+            margin-bottom: 30px;
+        }
+
+        input[type="file"] {
+            margin: 20px 0;
+            padding: 10px;
+            background: #fff;
+            color: #333;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        button {
+            background: #2575fc;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #1a57c8;
+        }
+
+        #result {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        #result img {
+            max-width: 100%;
+            border-radius: 10px;
+            margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        #emotion {
+            margin-top: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Detección de Emociones y Puntos Faciales</h1>
+        <form id="uploadForm">
+            <input type="file" id="imageInput" accept="image/*" required>
+            <br>
+            <button type="submit">Subir Imagen</button>
+        </form>
+        <div id="result">
+            <h3>Resultado:</h3>
+            <img id="outputImage" src="" alt="Imagen procesada" style="display:none;">
+            <p id="emotion"></p>
+        </div>
+    </div>
+    <script>
+        document.getElementById("uploadForm").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const formData = new FormData();
+            const imageInput = document.getElementById("imageInput").files[0];
+            formData.append("file", imageInput);
+
+            const response = await fetch("/upload", {
+                method: "POST",
+                body: formData,
+            });
+
+            const data = await response.json();
+            if (data.error) {
+                alert(data.error);
+            } else {
+                document.getElementById("outputImage").src = `data:image/png;base64,${data.image_with_points_base64}`;
+                document.getElementById("outputImage").style.display = "block";
+                document.getElementById("emotion").textContent = `Emoción principal: ${data.dominant_emotion}`;
+            }
+        });
+    </script>
+</body>
+</html>
