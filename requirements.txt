@@ -1,6 +1,6 @@
 Flask==2.3.2
 Flask-Cors==3.0.10
-mediapipe==0.10.0
+mediapipe==0.10.12
 numpy==1.24.3
 pillow==9.5.0
 google-api-python-client==2.92.0
